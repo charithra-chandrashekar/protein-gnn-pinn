@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.protein-gnn/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+notebooks/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Downloaded PDB structures (regenerate: python src/data/download_structures.py)
+data/raw/*
+!data/raw/.gitkeep
+
+# Processed dataset and model artifacts (regenerate via data pipeline + training)
+data/processed/*
+!data/processed/.gitkeep
+
+# Train/val/test splits are small and reproducible — tracked by default.
+# Uncomment to ignore regenerated splits:
+# data/splits/
+
+# Training checkpoints (see configs/training_config.yaml)
+checkpoints/
+
+# Experiment tracking
+wandb/
+runs/
+lightning_logs/
+tensorboard/
+mlruns/
+
+# Logs
+*.log
+
+# Local research notes (not part of the public codebase)
+Documents/
+
+# Backup / duplicate source files
+*_bkp.py
+*_back.py
+*_v1.py
+* 2.py
+* 2.yaml
+
+# Large generated protein catalog (regenerate: python src/data/select_proteins.py)
+# Keep configs/protein_list_v1.yaml as the small starter list.
+configs/protein_list.yaml
