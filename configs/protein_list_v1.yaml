@@ -1,0 +1,172 @@
+# Phase 0 pilot protein list (~15 proteins)
+# Source of truth for verification + curation.
+#
+# Schema per entry:
+#   uniprot_id      : UniProt accession — anchor identity key (used later to join
+#                      variant databases like ClinVar/gnomAD in Phase 6)
+#   gene_name       : common gene symbol, for human readability
+#   pdb_id          : expected PDB/mmCIF entry ID
+#   chain           : expected chain ID to extract
+#   family          : rough functional family, for dataset balance checks
+#   max_resolution  : quality bar in Angstrom (entry fails validation above this)
+#   expect_ligand   : if true, structure must contain at least one non-water HETATM
+#                      ligand group (i.e. this should NOT be an apo structure)
+#   min_residues    : minimum polymer residue count expected in the chain
+#                      (catches truncated / wrong-chain downloads)
+#   notes           : why this protein was chosen / future relevance
+#
+# NOTE: pdb_id / chain / resolution values below are starting points based on
+# well-known literature structures. The verification script cross-checks each
+# against the actual downloaded .cif — treat mismatches as signals to re-check
+# the PDB entry, not as script bugs.
+
+proteins:
+  - uniprot_id: P00533
+    gene_name: EGFR
+    pdb_id: 1M17
+    chain: A
+    family: kinase
+    max_resolution: 2.6
+    expect_ligand: true
+    min_residues: 250
+    notes: "Canonical kinase-inhibitor complex (erlotinib)"
+
+  - uniprot_id: P00519
+    gene_name: ABL1
+    pdb_id: 2HYY
+    chain: A
+    family: kinase
+    max_resolution: 2.6
+    expect_ligand: true
+    min_residues: 250
+    notes: "Imatinib (Gleevec) target, extremely well characterized"
+
+  - uniprot_id: P12931
+    gene_name: SRC
+    pdb_id: 2SRC
+    chain: A
+    family: kinase
+    max_resolution: 2.6
+    expect_ligand: true
+    min_residues: 250
+    notes: "Classic Src-family kinase fold reference"
+
+  - uniprot_id: P24941
+    gene_name: CDK2
+    pdb_id: 1HCK
+    chain: A
+    family: kinase
+    max_resolution: 2.5
+    expect_ligand: true
+    min_residues: 250
+    notes: "Cell-cycle kinase, large structural literature"
+
+  - uniprot_id: P15056
+    gene_name: BRAF
+    pdb_id: 1UWH
+    chain: A
+    family: kinase
+    max_resolution: 3.0   # actual deposited resolution: 2.95 A (confirmed)
+    expect_ligand: true
+    min_residues: 250
+    notes: "High clinical relevance (melanoma); verify PDB ID on download"
+
+  - uniprot_id: P07900
+    gene_name: HSP90AA1
+    pdb_id: 1YC4
+    chain: A
+    family: chaperone
+    max_resolution: 2.5
+    expect_ligand: true
+    min_residues: 150
+    notes: "Well-studied non-kinase pocket"
+
+  - uniprot_id: P00374
+    gene_name: DHFR
+    pdb_id: 1U72
+    chain: A
+    family: enzyme
+    max_resolution: 2.3
+    expect_ligand: true
+    min_residues: 150
+    notes: "Classic small enzyme (methotrexate-bound), clean/small graph"
+
+  - uniprot_id: P22966
+    gene_name: ACE
+    pdb_id: 1O86
+    chain: A
+    family: protease
+    max_resolution: 2.5
+    expect_ligand: true
+    min_residues: 500
+    notes: "Lisinopril-bound, very well characterized pocket (deposited under UniProt P22966)"
+
+  - uniprot_id: P05091
+    gene_name: ALDH2
+    pdb_id: 1CW3
+    chain: A
+    family: enzyme
+    max_resolution: 2.65   # actual deposited resolution: 2.58 A (confirmed)
+    expect_ligand: false
+    min_residues: 400
+    notes: "Metabolic enzyme, disease-linked variants; verify ligand presence"
+
+  - uniprot_id: P09874
+    gene_name: PARP1
+    pdb_id: 1UK0
+    chain: A
+    family: enzyme
+    max_resolution: 3.1   # actual deposited resolution: 3.00 A (confirmed)
+    expect_ligand: true
+    min_residues: 200
+    notes: "Strong clinical + ClinVar presence; verify PDB ID on download"
+
+  - uniprot_id: P56817
+    gene_name: BACE1
+    pdb_id: 1FKN
+    chain: A
+    family: protease
+    max_resolution: 2.5
+    expect_ligand: true
+    min_residues: 300
+    notes: "Well-studied Alzheimer's target"
+
+  - uniprot_id: P03372
+    gene_name: ESR1
+    pdb_id: 1ERR
+    chain: A
+    family: nuclear_receptor
+    max_resolution: 2.6
+    expect_ligand: true
+    min_residues: 200
+    notes: "Classic estradiol-bound ligand-binding domain"
+
+  - uniprot_id: P37231
+    gene_name: PPARG
+    pdb_id: 1FM9
+    chain: A
+    family: nuclear_receptor
+    max_resolution: 2.5
+    expect_ligand: true
+    min_residues: 200
+    notes: "Rosiglitazone-bound, well-characterized pocket"
+
+  - uniprot_id: P04637
+    gene_name: TP53
+    pdb_id: 1TUP
+    chain: A
+    family: transcription_factor
+    max_resolution: 2.7
+    expect_ligand: false
+    min_residues: 150
+    notes: "Most ClinVar-annotated protein in existence — seeds Phase 6 variant extension"
+
+  - uniprot_id: P13569
+    gene_name: CFTR
+    pdb_id: 5UAK
+    chain: A
+    family: channel
+    max_resolution: 4.0   # actual deposited cryo-EM resolution: 3.87 A (confirmed)
+    expect_ligand: false
+    min_residues: 1000
+    notes: "Rich structure-disease-variant literature (cystic fibrosis); cryo-EM, lower resolution expected — verify PDB ID"

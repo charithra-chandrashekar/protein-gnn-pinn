@@ -1,0 +1,238 @@
+# bond_taxonomy.yaml
+#
+# Phase 2: structured reference schema for the core covalent and
+# non-covalent interaction types relevant to protein structure and
+# ligand binding. This file is DATA, not code — it feeds two later
+# consumers, kept deliberately decoupled from each other:
+#   1. graph_builder.py (Phase 2/3) — richer edge features derived from
+#      these geometric criteria, beyond the current [distance, is_backbone]
+#   2. The standalone differentiable energy function (Phase 3) — uses the
+#      functional_form + parameters here as the actual energy terms,
+#      validated independently (real vs. decoy structure ranking) BEFORE
+#      being coupled into the GNN loss in Phase 4.
+#
+# Scope (deliberately limited for the first pass, per Phase 2 planning):
+# covalent (peptide bond), hydrogen bonds, van der Waals, electrostatic/
+# ionic (salt bridges), hydrophobic. Disulfide bonds, pi-stacking,
+# cation-pi, and metal coordination are OUT OF SCOPE for this version —
+# add them as new top-level entries following the same schema shape
+# when/if Phase 3-4 needs them, rather than guessing all of chemistry
+# up front.
+#
+# IMPORTANT ON THE NUMBERS BELOW: protein energetics is not a field with
+# single universally-agreed constants — reported values vary meaningfully
+# depending on context (gas phase vs. solvated, buried vs. surface-exposed,
+# which force field, which specific residue pairing). Every geometric
+# and energy value here is grounded in a cited source and chosen to
+# represent a reasonable, defensible "typical protein environment"
+# figure — but they are STARTING POINTS for Phase 3's energy function,
+# not exact ground truth. Phase 3 should treat these as initial
+# parameters to validate (e.g. via the decoy-ranking test), not as
+# fixed constants beyond question.
+
+covalent_peptide_bond:
+  description: >
+    The backbone amide bond linking consecutive residues (C-N bond
+    between residue i's carbonyl carbon and residue i+1's amide
+    nitrogen). Has significant partial double-bond character due to
+    resonance, which is why it is nearly planar (this planarity in turn
+    constrains backbone hydrogen bond geometry — see hydrogen_bond
+    below).
+  identifying_geometry:
+    bond_length_angstrom: 1.33
+    bond_length_range_angstrom: [1.32, 1.34]
+    torsion_note: >
+      The omega (C_alpha-C-N-C_alpha) torsion angle is ~180 deg (trans)
+      for the vast majority of peptide bonds, ~0 deg (cis) only for a
+      small minority (most commonly preceding Proline). Not currently
+      used as a filtering criterion in this schema's v1 scope, but
+      relevant if peptide-bond geometry is used as an edge feature later.
+  energy_scale:
+    functional_form: harmonic
+    equation: "E = k * (r - r0)^2"
+    parameters:
+      r0_angstrom: 1.33          # equilibrium bond length
+      # Force constant (k) is deliberately NOT filled in here with a
+      # single number — standard force fields (AMBER, CHARMM) each
+      # parameterize this somewhat differently; Phase 3 should pull
+      # k directly from whichever specific force field it adopts,
+      # rather than this schema inventing its own value.
+      k_note: "force-field-dependent; source from AMBER/CHARMM at Phase 3 implementation time"
+    typical_bond_dissociation_energy_kcal_per_mol: 80  # approximate,
+    # for context only (a covalent bond is far stronger than any
+    # non-covalent interaction below) — NOT what the harmonic term
+    # above computes (that's a small deviation-from-equilibrium
+    # penalty, not a full dissociation energy)
+  sources:
+    - "Standard structural biology reference values (peptide bond geometry); bond length and planarity are textbook-level, well-established values."
+
+hydrogen_bond:
+  description: >
+    Directional, atom-specific non-covalent interaction between an
+    electronegative donor (bonded to H) and an electronegative acceptor.
+    In proteins, occurs both backbone-backbone (e.g. alpha-helix,
+    beta-sheet) and involving side chains. The dominant secondary
+    structure-stabilizing interaction alongside hydrophobic packing.
+  identifying_geometry:
+    donor_acceptor_distance_angstrom_range: [2.5, 3.5]
+    donor_acceptor_distance_typical_angstrom: 3.0
+    category_breakdown:
+      strong_mostly_covalent: {distance_range_angstrom: [2.2, 2.5], energy_kcal_per_mol_range: [14, 40]}
+      moderate_mostly_electrostatic: {distance_range_angstrom: [2.5, 3.2], energy_kcal_per_mol_range: [4, 15]}
+      weak_electrostatic: {distance_range_angstrom: [3.2, 4.0], energy_kcal_per_mol_range: [0, 4]}
+    angle_note: >
+      Real hydrogen bonds are also angle-dependent (donor-H-acceptor
+      angle close to linear is stronger); this v1 schema uses distance
+      only as the identifying criterion for simplicity, consistent with
+      the current graph_builder.py's distance-only edges. Angle terms
+      are a natural v2 addition once Phase 3's energy function needs
+      the extra precision — see functional_form below, which DOES
+      include an angular term for when that's implemented.
+  energy_scale:
+    typical_protein_context_kcal_per_mol: 1.0    # convenient single
+    # "typical" anchor value for a first energy-function pass (Cambridge
+    # MedChem Consulting summary table); real values genuinely range
+    # ~0.5-9 kcal/mol depending on context, per sources below
+    context_dependent_range_kcal_per_mol: [0.5, 9.0]
+    functional_form: mayo_hbond_potential
+    equation: "E_HB = D0 * (5*(R0/R)^12 - 6*(R0/R)^10) * f(theta, psi, phi)"
+    parameters:
+      R0_angstrom: 2.8      # equilibrium donor-acceptor distance
+      D0_kcal_per_mol: 8.0  # well depth
+      angular_term_note: >
+        f(theta, psi, phi) depends on donor/acceptor hybridization
+        (sp3 vs sp2) — see source for the four specific angular forms.
+        Not implemented in this v1 schema; use distance-only (Lennard-
+        Jones-style radial term via R0/D0 above) until angular
+        precision is needed.
+  sources:
+    - "Jeffrey, H bond distance/energy categorization (via ResearchGate/Proteopedia summary): donor-acceptor distance categories and associated energies."
+    - "Pace, C.N. (2009, 2014): hydrogen bond energy range ~1.3-9 kcal/mol in protein context."
+    - "Mayo energy function (via Kinematic Flexibility Analysis, arXiv:1802.08683): R0=2.8A, D0=8 kcal/mol, full angular functional form."
+    - "Cambridge MedChem Consulting: typical single-interaction energy table (~1 kcal/mol H-bond anchor value)."
+
+van_der_waals:
+  description: >
+    Short-range attractive (London dispersion) force between any two
+    atoms in close proximity, with a strong short-range repulsive term
+    (Pauli exclusion) preventing overlap. Present between EVERY atom
+    pair at close range, not specific to particular chemical groups —
+    contributes cumulatively across many atom pairs to overall packing
+    stability, especially in buried hydrophobic cores.
+  identifying_geometry:
+    contact_distance_angstrom_range: [3.0, 4.5]
+    note: >
+      Distance range here refers to the region where the attractive
+      term dominates (near the Lennard-Jones potential minimum); the
+      exact distance is atom-type-pair-dependent (different sigma per
+      element/hybridization).
+  energy_scale:
+    typical_per_atom_pair_kcal_per_mol_range: [0.5, 1.0]
+    functional_form: lennard_jones_12_6
+    equation: "E = 4*epsilon * ((sigma/r)^12 - (sigma/r)^6)"
+    parameters:
+      epsilon_note: >
+        Well-depth parameter, atom-type-pair-dependent (e.g. AMBER
+        force field tabulates per-element sigma/epsilon). Not a single
+        constant — Phase 3 should source a standard force-field table
+        (e.g. AMBER) rather than this schema inventing generic values.
+      sigma_note: "Distance at which potential energy is zero, also atom-type-pair-dependent (same source as epsilon)."
+  sources:
+    - "Standard Lennard-Jones 12-6 potential (general physical chemistry reference; e.g. Chemistry LibreTexts, Cambridge BBK course notes)."
+    - "AMBER force field parameter convention (referenced via Cambridge BBK course notes) for per-atom-type sigma/epsilon."
+    - "ScienceDirect topic overview: van der Waals interaction ~0.5-1 kcal/mol typical range in protein/antibody context."
+
+electrostatic_ionic:
+  description: >
+    Coulombic attraction (or repulsion) between formally charged
+    groups. In proteins, most commonly manifests as a SALT BRIDGE: an
+    ion pair between a negatively charged carboxylate (Asp/Glu side
+    chain) and a positively charged ammonium (Lys) or guanidinium
+    (Arg) side chain. Strongly modulated by solvent/desolvation — the
+    bare Coulombic attraction is far stronger than the NET stabilizing
+    contribution once desolvation cost is accounted for.
+  identifying_geometry:
+    charge_center_distance_angstrom_range: [2.5, 4.0]
+    stabilizing_threshold_note: >
+      Surface-exposed salt bridges are typically only net-stabilizing
+      when charge separation is <=4A; buried salt bridges can be
+      stabilizing at closer range but incur a larger desolvation
+      penalty that must be separately accounted for (not captured by
+      the bare Coulomb term alone).
+  energy_scale:
+    typical_net_protein_context_kcal_per_mol_range: [-5.0, -3.0]  # net
+    # stabilizing contribution IN A SOLVATED PROTEIN CONTEXT (negative
+    # = stabilizing); this is much weaker than the bare gas-phase
+    # Coulomb attraction because of the desolvation penalty — see
+    # bare_coulomb_note below for why these numbers differ so much
+    bare_coulomb_note: >
+      Gas-phase/vacuum Coulomb attraction between an isolated ion pair
+      is far stronger (~-100+ kcal/mol at short range) — NOT the
+      relevant number for a protein energy function, since it ignores
+      solvent screening and desolvation cost entirely. Use the net
+      protein-context range above for Phase 3, not the bare Coulomb
+      magnitude.
+    functional_form: coulomb_with_dielectric_screening
+    equation: "E = (k_e * q1 * q2) / (epsilon_r * r)"
+    parameters:
+      k_e_note: "Coulomb's constant; standard physical constant."
+      epsilon_r_note: >
+        Effective/screened dielectric constant — NOT vacuum (epsilon_r=1).
+        Protein-interior dielectric is commonly approximated in the
+        range ~4-20 depending on model/context; solvent-exposed regions
+        approach bulk water (~80). This screening is what accounts for
+        the large gap between bare_coulomb_note and the net protein-
+        context energy above. Phase 3 should pick a specific value/
+        model (e.g. a distance-dependent or Debye-Huckel-style
+        dielectric) rather than treating epsilon_r as fixed.
+  sources:
+    - "Salt bridge stabilization distance threshold (<=4A): ScienceDirect, Electrostatic Solvation Energy for Two Oppositely Charged Ions in a Solvated Protein System."
+    - "Net salt bridge stabilization ~-3 to -5 kcal/mol in protein folding context: Grokipedia summary of salt bridge energetics (T4 lysozyme and related studies); corroborated by Journal of Physical Chemistry B force-field comparison study."
+    - "Cambridge MedChem Consulting: typical single-interaction energy table (~2 kcal/mol salt bridge anchor value, medicinal-chemistry/ligand-binding context)."
+
+hydrophobic:
+  description: >
+    Not a direct atom-atom force like the others above — an
+    entropically-driven effect from burying nonpolar surface area away
+    from water, releasing ordered water molecules. The dominant
+    contributor to overall protein folding stability (typically
+    somewhat larger than the cumulative hydrogen-bond contribution).
+    Because it's a bulk/surface-area effect rather than a pairwise
+    atom-atom interaction, it needs a DIFFERENT identifying criterion
+    than the other entries in this schema (buried surface area, not a
+    simple pairwise distance).
+  identifying_geometry:
+    criterion_type: buried_surface_area
+    note: >
+      Unlike the other interaction types above, hydrophobic contact is
+      best identified via CHANGE IN SOLVENT-ACCESSIBLE SURFACE AREA
+      (residue/atom no longer exposed to solvent), not a single pairwise
+      distance cutoff. A pairwise proxy (nonpolar side-chain atoms
+      within van_der_waals contact distance of each other) can
+      approximate this for a first pass, reusing the van_der_waals
+      contact_distance_angstrom_range above, but is a simplification —
+      true buried-surface-area calculation (e.g. via a rolling-probe
+      algorithm) is more accurate and should be considered for Phase 3
+      if this proxy proves too coarse.
+  energy_scale:
+    per_buried_ch2_group_kcal_per_mol: 1.1        # average, +/- 0.5
+    per_buried_surface_area_cal_per_mol_per_angstrom2: 25  # a commonly
+    # used practical approximation for converting buried nonpolar
+    # surface area directly to a free energy contribution
+    typical_single_interaction_anchor_kcal_per_mol: 0.7  # convenient
+    # single-value anchor (Cambridge MedChem Consulting), for
+    # consistency with the other entries' typical_*_anchor value
+    functional_form: surface_area_dependent
+    equation: "E = -gamma * delta_ASA"
+    parameters:
+      gamma_note: >
+        Surface tension-like coefficient, in cal/(mol*A^2); see
+        per_buried_surface_area_cal_per_mol_per_angstrom2 above for a
+        typical starting value. delta_ASA is the CHANGE in solvent-
+        accessible surface area upon burial (folding/binding), requires
+        an actual SASA calculation (e.g. via a rolling-probe algorithm),
+        not something derivable from a single pairwise distance.
+  sources:
+    - "Pace, C.N. et al.: burying a -CH2- group contributes 1.1 +/- 0.5 kcal/mol to protein stability (average across 138 hydrophobic interaction variants, 11 proteins)."
+    - "Chothia, C. (1976), buried/accessible surface area in proteins: ~25 cal/mol/A^2 as a practical surface-area-to-energy conversion; 2-3 kcal/mol of hydrophobic free energy per residue upon secondary structure formation."
+    - "Cambridge MedChem Consulting: typical single-interaction energy table (~0.7 kcal/mol hydrophobic anchor value)."

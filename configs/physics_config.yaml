@@ -1,0 +1,28 @@
+# Phase 2: bond types, energy scales, ideal geometries
+bonds:
+  peptide:
+    ideal_length: 1.33  # Angstrom
+    force_constant: 300.0
+  disulfide:
+    ideal_length: 2.05
+    force_constant: 200.0
+
+angles:
+  backbone_ca_c_n:
+    ideal_deg: 116.0
+    force_constant: 50.0
+
+nonbonded:
+  cutoff: 8.0
+  epsilon_scale: 1.0
+  sigma_scale: 1.0
+
+solvation:
+  enabled: false
+  dielectric: 80.0
+  probe_radius: 1.4
+
+energy_scales:
+  bonded: 1.0
+  nonbonded: 0.1
+  solvation: 0.05

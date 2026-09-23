@@ -1,0 +1,30 @@
+# Training hyperparameters and loss weights
+training:
+  seed: 42
+  batch_size: 4
+  num_epochs: 100
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  grad_clip: 1.0
+  device: cuda
+
+loss_weights:
+  lambda_structure: 1.0   # λ1: data-fit (FAPE / lDDT-style)
+  lambda_physics: 0.1     # λ2: physics regularizer
+  lambda_aux: 0.0
+
+scheduler:
+  name: cosine
+  warmup_epochs: 5
+  min_lr: 1.0e-6
+
+checkpoint:
+  save_dir: checkpoints/
+  save_every: 10
+  keep_last: 3
+
+data:
+  train_split: data/splits/train.txt
+  val_split: data/splits/val.txt
+  test_split: data/splits/test.txt
+  processed_dir: data/processed/

@@ -1,0 +1,21 @@
+# GNN architecture parameters
+model:
+  name: equivariant_gnn
+  hidden_dim: 128
+  num_layers: 4
+  num_heads: 4
+  edge_dim: 32
+  dropout: 0.1
+  activation: silu
+
+encoder:
+  node_feature_dim: 64
+  edge_feature_dim: 32
+  output_dim: 128
+
+heads:
+  structure:
+    enabled: true
+    hidden_dim: 64
+  energy:
+    enabled: false  # Phase 5
